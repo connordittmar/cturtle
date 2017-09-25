@@ -1,5 +1,6 @@
 import re
 import sys
+from math import sqrt
 
 class BaseType(object):
     """ BaseType is a simple base class which provides basic functions.
@@ -98,10 +99,29 @@ class Telemetry(BaseType):
 
     attrs = ['latitude', 'longitude', 'heading']
 
-    def __init__(self,latitude,longitude,heading):
+    def __init__(self,timestamp,latitude,longitude,heading):
+        self.timestamp = float(timestamp)
         self.latitude = float(latitude)
         self.longitude = float(longitude)
         self.heading = float(heading)
+
+class ControlState(BaseType):
+    """Placeholder class for control variables"""
+    def __init__(self,heading,speed):
+        self.heading = float(heading)
+        self.speed = float(speed)
+
+class VehicleState(BaseType):
+    """Platform state estimation
+
+    Attributes:
+        velocity: Velocity of vehicle in meters/sec
+    """
+    def __init__(self,velocity):
+        self.velocity = float(velocity)
+
+    def estimate(self,telemetry_old,telemetry):
+        self.velocity = sqrt((telemetry.latitude-telemety_old.latitude)**2+(telemetry.longitude-telemetry_old.longitude)**2)/(telemetry.timestamp-telemetry_old.timestamp)
 
 class StationaryObstacle(BaseType):
     """A fixed obstacle.

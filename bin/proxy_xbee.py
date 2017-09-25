@@ -28,11 +28,13 @@ class NMEAParser(object):
             Returns:
             Telemetry object of either ownship or another vehicle.
 
+            Exception:
+            timeoutexception
             """
             msg = self.asv.readline()
             msg = msg.split('!')[0].split(',')
             if msg[0] == '$'+ self.asvid:
-                telemetry = types.Telemetry(latitude=msg[2],longitude=msg[4],heading=self.asv_heading(msg[5])
+                telemetry = types.Telemetry(timestamp=msg[1],latitude=msg[2],longitude=msg[4],heading=self.asv_heading(msg[5])
             if msg is None:
                 logger.critical(
                     "Did not receive telemetry packet for over 10 seconds.")
