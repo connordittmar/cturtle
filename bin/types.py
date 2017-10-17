@@ -155,3 +155,8 @@ class Mission(BaseType):
         self.home_pos = LocalPosition.deserialize(home_pos)
         self.mission_waypoints = [Waypoint.deserialize(mw)
                                     for mw in mission_waypoints]
+
+class ControlCommand(BaseType):
+    def __init__(self,speed,heading):
+        self.speed = fload(speed)
+        self.heading = float(hading)
