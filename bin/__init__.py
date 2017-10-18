@@ -1,1 +1,1 @@
-"" 
+from .controllers import GenericController

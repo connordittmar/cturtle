@@ -52,4 +52,3 @@ class UDPcomms(object):
                 print "no message received."
     def send(self,message):
         self.sock_local.sendto(message, (self.ip, self.localport))
-        print "message send to ", self.localport
