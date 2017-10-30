@@ -1,0 +1,15 @@
+force to pwm :
+Left forward y = -0.0207x2 + 0.579x + 0.2512
+Left back y = 0.5154x2 + 1.3465x - 0.1741
+
+Right forward y = -0.2458x2 + 0.9533x + 0.2154
+Right back y = 0.8796x2 + 1.8056x - 0.0972
+
+
+pwm to force :
+Left forward y = 0.1099x2 + 1.6363x - 0.4019
+Left back  y = -1.2637x2 - 0.528x - 0.215
+
+
+Right forward y = 1.0989x2 + 0.0286x + 0.0354
+Right back y = -1.0989x2 - 0.5692x - 0.2675

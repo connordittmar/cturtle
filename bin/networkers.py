@@ -1,6 +1,6 @@
 #Module to receive NMEAish packets and forward
 #over to other systems
-
+import socket
 import logging
 import sys
 import time
@@ -34,7 +34,7 @@ class NMEAParser(object):
             msg = self.asv.readline()
             msg = msg.split('!')[0].split(',')
             if msg[0] == '$'+ self.asvid:
-                telemetry = types.Telemetry(timestamp=msg[1],latitude=msg[2],longitude=msg[4],heading=self.asv_heading(msg[5])
+                telemetry = types.Telemetry(timestamp=msg[1],latitude=msg[2],longitude=msg[4],heading=self.asv_heading(msg[5]))
             if msg is None:
                 logger.critical(
                     "Did not receive telemetry packet for over 10 seconds.")
@@ -49,3 +49,26 @@ class NMEAParser(object):
                 self.sent_since_print = 0
                 self.last_print = self.now
             return telemetry
+
+class UDPcomms(object):
+    def __init__(self,ip='127.0.0.1',remoteport=8001,localport=8000):
+        self.ip = ip
+        self.remoteport = remoteport
+        self.localport = localport
+        self.sock_local = socket.socket(socket.AF_INET,
+                                    socket.SOCK_DGRAM)
+        self.sock_remote = socket.socket(socket.AF_INET,
+                                    socket.SOCK_DGRAM)
+        self.sock_remote.bind((self.ip,self.remoteport))
+        self.sock_remote.settimeout(5.0)
+
+    def receive(self):
+        now = time.time()
+        while True:
+            try:
+                data, addr = self.sock_remote.recvfrom(1024)
+                return data
+            except:
+                print "no message received."
+    def send(self,message):
+        self.sock_local.sendto(message, (self.ip, self.localport))

@@ -2,6 +2,14 @@ import re
 import sys
 from math import sqrt
 
+class InputKeys(object):
+    def __init__(self):
+        self.w = "U"
+        self.a = "U"
+        self.s = "U"
+        self.d = "U"
+
+
 class BaseType(object):
     """ BaseType is a simple base class which provides basic functions.
 
@@ -82,7 +90,7 @@ class Waypoint(BaseType):
 
     def __init__(self, order, latitude, longitude):
         self.order = int(order)
-        self.latitude float(latitude)
+        self.latitude = float(latitude)
         self.longitude = float(longitude)
 
 class Telemetry(BaseType):
@@ -99,11 +107,10 @@ class Telemetry(BaseType):
 
     attrs = ['latitude', 'longitude', 'heading']
 
-    def __init__(self,timestamp,latitude,longitude,heading):
-        self.timestamp = float(timestamp)
-        self.latitude = float(latitude)
-        self.longitude = float(longitude)
+    def __init__(self,position,heading,timestamp):
+        self.position = position
         self.heading = float(heading)
+        self.timestamp = float(timestamp)
 
 class ControlState(BaseType):
     """Placeholder class for control variables"""

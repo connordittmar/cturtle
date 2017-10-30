@@ -1,26 +1,31 @@
 from math import atan2
 
 class GenericController(object):
-    def __init__(self,period=0.05,pid_gains=[0.002,0,0.00],digital_gains=[0.01]):
-        self.period = float(period)
+    def __init__(self,pid_gains=[0.40396,-0.008491],force_gain=1.0869):
         self.pid_gains = pid_gains
-        self.digital_gains = digital_gains
+        self.force_gain = force_gain
 
-    def control(self,error,old_error,old_output,speed):
-        output = error * self.pid_gains[0] + old_error * self.pid_gains[1] - old_output * self.pid_gains[2] - speed * self.digital_gains[0]
-        if output > 1.0:
-            output = 1.0
-        elif output < -1.0:
-            output = -1.0
-        if abs(error) > 3:
-            scaled_output = abs(output) * 0.6 + 0.4 # deadzone correction
-        elif abs(speed) < 2:
-            scaled_output = 0
-        else:
-            scaled_output = output
-        if output < 0:
-            scaled_output = -scaled_output
-        return [scaled_output,-scaled_output]
+    def control(self,error,old_error,old_output):
+        output = error * self.pid_gains[0] + old_error * self.pid_gains[1] + old_output * self.force_gain
+        print output
+        return [self.force2pwm(output,'left'),self.force2pwm(-output,'right')]
+
+    def force2pwm(self,force,motor):
+        if motor == 'left':
+            if force >= 0:
+                pwm = -0.0207*force**2 + 0.579*force + 0.2512
+            else:
+                pwm = 0.5154*force**2 + 1.3465*force -0.1741
+        if motor == 'right':
+            if force >= 0:
+                pwm = -0.2458*force**2 + 1.3465*force - 0.1741
+            else:
+                pwm = 0.8796*force**2 + 1.8056*force - 0.0972
+        if pwm > 1:
+            pwm = 1
+        elif pwm < -1:
+            pwm = -1
+        return pwm
 
 class Navigator(object):
     def __init__(self):
