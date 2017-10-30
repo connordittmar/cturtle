@@ -1,7 +1,7 @@
 from math import atan2
 
 class GenericController(object):
-    def __init__(self,pid_gains=[0.40396,-0.008491],force_gain=1.0869):
+    def __init__(self,pid_gains=[0.40396,0.008491],force_gain=1.0869):
         self.pid_gains = pid_gains
         self.force_gain = force_gain
 

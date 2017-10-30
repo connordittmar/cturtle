@@ -77,11 +77,11 @@ while True:
     except Exception as exc:
         print('Exception: %s' % exc)
     error = desired_heading - asv_heading
-    #if error > 180:
-    #    error = error - 360
-    #elif error < -180:
-    #    error = error + 360
-    #if manual_control == False:
+    if error > 180:
+        error = error - 360
+    elif error < -180:
+        error = error + 360
+    if manual_control == False:
     pwms = heading_controller.control(error,old_error,old_pwms[0])
     old_error = error
     old_pwms = pwms
