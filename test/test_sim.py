@@ -5,7 +5,7 @@ import pygame
 from udp_test import UDPcomms
 from math import sin,cos
 from concurrent.futures import ThreadPoolExecutor
-from bin import GenericController
+from bin import GenericStateController, force2pwm, get_speed, SpeedController
 from pygame.locals import *
 from bin import InputKeys
 
@@ -13,60 +13,18 @@ communicator = UDPcomms(remoteport=8001,localport=8000)
 controlsignal = "$1.000,1.000"
 variable = 1
 executor = ThreadPoolExecutor(max_workers=8)
-heading_controller = GenericController()
-desired_heading = 270
-old_error = 0
-old_pwms = [0.0,0.0]
-old_timestamp = time.time()
-old_heading = 1
+heading_controller = GenericStateController()
+speed_controller = SpeedController()
+desired_heading = 90
+desired_speed = 1
+error_last = 0
+timestamp_last = time.time()
+heading_last = 1
+asv_heading_last = 0
+asv_pos_last = [0,0]
 
-pygame.init()
-user_done = False
-keys = InputKeys()
-manual_control = False
 while True:
-
-    # Get User Input
-    for event in pygame.event.get():
-        if (event.type == pygame.QUIT):
-            user_done = True
-        elif (event.type == pygame.KEYDOWN):
-            if (event.key == K_ESCAPE):
-                user_done = True
-            elif (event.key==K_w):
-                keys.w = 'D'
-            elif (event.key==K_a):
-                keys.a = 'D'
-            elif (event.key==K_s):
-                keys.s = 'D'
-            elif (event.key==K_d):
-                keys.d = 'D'
-
-        elif (event.type == pygame.KEYUP):
-            if (event.key==K_w):
-                keys.w = 'U'
-            elif (event.key==K_a):
-                keys.a = 'U'
-            elif (event.key==K_s):
-                keys.s = 'U'
-            elif (event.key==K_d):
-                keys.d = 'U'
-    # If keys are down, input control commands
-    if keys.w == 'D':
-        pwms = [1.0,1.0]
-        manual_control = True
-    elif keys.s == 'D':
-        pwms = [-1.0,-1.0]
-        manual_control = True
-    elif keys.a == 'D':
-        pwms = [-1.0,1.0]
-        manual_control = True
-    elif keys.d == 'D':
-        pwms = [1.0,-1.0]
-        manual_control = True
-    else:
-        manual_control == False
-
+    start = time.time()
     packet = executor.submit(communicator.receive)
     try:
         telemetry = packet.result()
@@ -81,11 +39,19 @@ while True:
         error = error - 360
     elif error < -180:
         error = error + 360
-    if manual_control == False:
-    pwms = heading_controller.control(error,old_error,old_pwms[0])
-    old_error = error
-    old_pwms = pwms
-    old_timestamp = timestamp
+    speed = get_speed(asv_pos,asv_pos_last,(timestamp_last+0.0001))
+    speed_error = desired_speed - speed
+    ang_vel_est = (asv_heading - heading_last) / (timestamp - timestamp_last +  0.0001)
+    force = heading_controller.control(error,ang_vel_est)
+    force2 = speed_controller.control(speed_error,speed)
+    pwms = [force2pwm(force2+force,'left'),force2pwm(force2-force,'right')]
+    heading_last = asv_heading
+    speed_last = speed
+    timestamp_last = timestamp
+    asv_pos_last = asv_pos
     controlsignal = ("$%f,%f" % (pwms[0],pwms[1]))
     print  "Control Signal:" , controlsignal , "Error:" , error, "Heading:" , asv_heading
     communicator.send(controlsignal)
+    dt = time.time() - start
+    if dt < 0.01:
+        time.sleep(dt)

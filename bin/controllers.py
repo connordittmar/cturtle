@@ -1,31 +1,45 @@
 from math import atan2
 
 class GenericController(object):
-    def __init__(self,pid_gains=[0.40396,0.008491],force_gain=1.0869):
+    """ Generic PID controller for SISO system
+    """
+    def __init__(self,pid_gains=[1,0.018],force_gain=0):
         self.pid_gains = pid_gains
         self.force_gain = force_gain
 
     def control(self,error,old_error,old_output):
+        """Usage: pwms = controller.control(error,old_error,old_output)
+        """
+        error = error/180*3.14159
         output = error * self.pid_gains[0] + old_error * self.pid_gains[1] + old_output * self.force_gain
-        print output
-        return [self.force2pwm(output,'left'),self.force2pwm(-output,'right')]
+        return output
 
-    def force2pwm(self,force,motor):
-        if motor == 'left':
-            if force >= 0:
-                pwm = -0.0207*force**2 + 0.579*force + 0.2512
-            else:
-                pwm = 0.5154*force**2 + 1.3465*force -0.1741
-        if motor == 'right':
-            if force >= 0:
-                pwm = -0.2458*force**2 + 1.3465*force - 0.1741
-            else:
-                pwm = 0.8796*force**2 + 1.8056*force - 0.0972
-        if pwm > 1:
-            pwm = 1
-        elif pwm < -1:
-            pwm = -1
-        return pwm
+class GenericStateController(object):
+    """ Generic SS controller for MIMO system
+    """
+    def __init__(self,K1=.2,K2=0.00):
+        self.K1 = K1
+        self.K2 = K2
+
+    def control(self,error,speed):
+        """Usage: pwms = controller.control(error,old_error,old_output)
+        """
+        error = error/180*3.14159
+        output = error * self.K1 - speed * self.K2
+        return output
+
+class SpeedController(object):
+    """
+    State Spaceish speed control yielding a needed forward force
+    """
+    def __init__(self,K=1,du=0.07,m=1.19):
+        self.K = K
+        self.du = du
+        self.m = m
+
+    def control(self,speed_error,speed):
+        output = self.du*speed + self.K*speed_error / self.m
+        return output
 
 class Navigator(object):
     def __init__(self):
