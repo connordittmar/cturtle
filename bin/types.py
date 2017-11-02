@@ -1,6 +1,7 @@
 import re
 import sys
 from math import sqrt
+from helpers import get_speed,get_ang_vel, force2pwm
 
 class InputKeys(object):
     def __init__(self):
@@ -42,7 +43,7 @@ class BaseType(object):
         serial = {}
         for attr in self.attrs:
             data = self.__dict__[attr]
-            if isinstance(data, ClientBaseType):
+            if isinstance(data, BaseType):
                 serial[attr] = data.serialize()
             elif isinstance(data, list):
                 serial[attr] = [d.serialize() for d in data]
@@ -58,40 +59,32 @@ class BaseType(object):
         else:
             return cls(**d)
 
-class LocalPosition(BaseType):
-    """Local position in 'latitude' and 'longitude'
+class Position(BaseType):
 
-    Attributes:
-        latitude: Latitude in meters
-        Longitude: Longitude in meters
+    attrs = ['pos_x','pos_y']
 
-    Raises:
-        ValueError: Argument not convertable to float.
-    """
-
-    attrs = ['latitude','longitude']
-
-    def __init__(self, latitude, longitude):
-        self.latitude = float(latitude)
-        self.longitude = float(longitude)
+    def __init__(self,pos_x,pos_y):
+        self.pos_x = float(pos_x)
+        self.pos_y = float(pos_y)
 
 class Waypoint(BaseType):
     """Waypoint consisting of order, lat, long
 
     Attributes:
         order: an ID giving place of wp in stack
-        latitude: coordinates in basin in meters
-        longitude: coordinates in basin in meters
+        position: list [x,y] coordinates of location in basin
 
     Raises:
         ValueError: Argument not convertable to int
         or float
     """
 
-    def __init__(self, order, latitude, longitude):
+    attrs = ['order','pos_x','pos_y']
+
+    def __init__(self, order, pos_x, pos_y):
         self.order = int(order)
-        self.latitude = float(latitude)
-        self.longitude = float(longitude)
+        self.pos_x = float(pos_x)
+        self.pos_y = float(pos_y)
 
 class Telemetry(BaseType):
     """Platform Telemetry at a point in time.
@@ -105,18 +98,13 @@ class Telemetry(BaseType):
         ValueError: Argument not convertable to float.
     """
 
-    attrs = ['latitude', 'longitude', 'heading']
+    attrs = ['pos_x','pos_y','heading','timestamp']
 
-    def __init__(self,position,heading,timestamp):
-        self.position = position
+    def __init__(self,pos_x=0,pos_y=0,heading=0,timestamp=1):
+        self.pos_x = float(pos_x)
+        self.pos_y = float(pos_y)
         self.heading = float(heading)
         self.timestamp = float(timestamp)
-
-class ControlState(BaseType):
-    """Placeholder class for control variables"""
-    def __init__(self,heading,speed):
-        self.heading = float(heading)
-        self.speed = float(speed)
 
 class VehicleState(BaseType):
     """Platform state estimation
@@ -124,11 +112,22 @@ class VehicleState(BaseType):
     Attributes:
         velocity: Velocity of vehicle in meters/sec
     """
-    def __init__(self,velocity):
-        self.velocity = float(velocity)
 
-    def estimate(self,telemetry_old,telemetry):
-        self.velocity = sqrt((telemetry.latitude-telemety_old.latitude)**2+(telemetry.longitude-telemetry_old.longitude)**2)/(telemetry.timestamp-telemetry_old.timestamp)
+    attrs = ['pos_x','pos_y','heading','speed','ang_vel']
+
+    def __init__(self,pos_x=0,pos_y=0,heading=0,speed=0,ang_vel=0):
+        self.pos_x = float(pos_x)
+        self.pos_y = float(pos_y)
+        self.heading = float(heading)
+        self.speed = float(speed)
+        self.ang_vel = float(ang_vel)
+
+    def update(self,telemetry,telemetry_last):
+        self.pos_x = telemetry.pos_x
+        self.pos_y = telemetry.pos_y
+        self.heading = telemetry.heading
+        self.speed = get_speed(telemetry,telemetry_last)
+        self.ang_vel = get_ang_vel(telemetry,telemetry_last)
 
 class StationaryObstacle(BaseType):
     """A fixed obstacle.
@@ -143,11 +142,11 @@ class StationaryObstacle(BaseType):
         ValueError: Argument not convertable to float.
     """
 
-    attrs = ['latitude','longitude','radius']
+    attrs = ['pos_x','pos_y','radius']
 
-    def __init__(self,latitude,longitude,radius):
-        self.latitude = float(latitude)
-        self.longitude = float(longitude)
+    def __init__(self,pos_x,pos_y,radius):
+        self.pos_x = float(pos_x)
+        self.pos_y = float(pos_y)
         self.radius = float(radius)
 
 class Mission(BaseType):
@@ -158,12 +157,12 @@ class Mission(BaseType):
         mission_waypoints: list of waypoints to travel
     """
 
-    def __init__(self,home_pos,mission_waypoints):
-        self.home_pos = LocalPosition.deserialize(home_pos)
-        self.mission_waypoints = [Waypoint.deserialize(mw)
-                                    for mw in mission_waypoints]
+    attrs = ['id','active','home_pos','mission_waypoints']
 
-class ControlCommand(BaseType):
-    def __init__(self,speed,heading):
-        self.speed = fload(speed)
-        self.heading = float(hading)
+    def __init__(self,id,active,home_pos,mission_waypoints):
+        self.id = int(id)
+        self.active = bool(active)
+        self.home_pos = Position.deserialize(home_pos)
+        self.mission_waypoints = [
+            Waypoint.deserialize(mw) for mw in mission_waypoints
+        ]

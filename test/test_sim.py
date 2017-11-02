@@ -5,7 +5,7 @@ import pygame
 from udp_test import UDPcomms
 from math import sin,cos
 from concurrent.futures import ThreadPoolExecutor
-from bin import GenericStateController, force2pwm, get_speed, SpeedController
+from bin import GenericStateController, force2pwm, get_speed_dep, SpeedController
 from pygame.locals import *
 from bin import InputKeys
 
@@ -15,7 +15,7 @@ variable = 1
 executor = ThreadPoolExecutor(max_workers=8)
 heading_controller = GenericStateController()
 speed_controller = SpeedController()
-desired_heading = 90
+desired_heading = 0
 desired_speed = 1
 error_last = 0
 timestamp_last = time.time()
@@ -39,7 +39,7 @@ while True:
         error = error - 360
     elif error < -180:
         error = error + 360
-    speed = get_speed(asv_pos,asv_pos_last,(timestamp_last+0.0001))
+    speed = get_speed_dep(asv_pos,asv_pos_last,(timestamp_last+0.0001))
     speed_error = desired_speed - speed
     ang_vel_est = (asv_heading - heading_last) / (timestamp - timestamp_last +  0.0001)
     force = heading_controller.control(error,ang_vel_est)

@@ -1,4 +1,4 @@
-from math import atan2
+from math import atan2, sqrt, pi
 
 class GenericController(object):
     """ Generic PID controller for SISO system
@@ -17,7 +17,7 @@ class GenericController(object):
 class GenericStateController(object):
     """ Generic SS controller for MIMO system
     """
-    def __init__(self,K1=.2,K2=0.00):
+    def __init__(self,K1=.2,K2=0.001):
         self.K1 = K1
         self.K2 = K2
 
@@ -32,7 +32,7 @@ class SpeedController(object):
     """
     State Spaceish speed control yielding a needed forward force
     """
-    def __init__(self,K=1,du=0.07,m=1.19):
+    def __init__(self,K=0.6,du=0.07,m=1.19):
         self.K = K
         self.du = du
         self.m = m
@@ -41,19 +41,34 @@ class SpeedController(object):
         output = self.du*speed + self.K*speed_error / self.m
         return output
 
-class Navigator(object):
-    def __init__(self):
+class WaypointController(object):
+    def __init__(self,wps):
         self.wp_index = 0
-        self.location = [0,0]
+        self.wp_list = wps
 
-    def read_waypoints(self,waypoints):
+    def add_waypoints(self,waypoints):
         self.wp_list = waypoints
 
-    def navigate(self):
-        desired_heading = self.get_heading_to_wp()
+    def navigate(self,asv_location):
+        dist_to_next_wp = self.get_distance_to_wp(asv_location)
+        if dist_to_next_wp < 0.3:
+            if self.wp_index == (len(self.wp_list) - 1):
+                self.wp_index = 0 #Consider WP completed, move to next WP
+            else:
+                self.wp_index += 1
+        desired_heading = self.get_heading_to_wp(asv_location)
+        des_speed = self.get_distance_to_wp(asv_location) * 0.8
+        if des_speed > 0.5:
+            des_speed = 0.5
+        return [desired_heading,des_speed]
 
-    def get_heading_to_wp(self):
+    def get_heading_to_wp(self,location):
         current_wp = self.wp_list[self.wp_index]
-        vector_to_wp = [current_wp[0]-self.location[0],current_wp[1]-self.location[1]]
+        vector_to_wp = [current_wp[0]-location[0],current_wp[1]-location[1]]
         heading_to_wp = atan2(vector_to_wp[1],vector_to_wp[0])
-        return heading_to_wp
+        return heading_to_wp*180/pi
+
+    def get_distance_to_wp(self,location):
+        current_wp = self.wp_list[self.wp_index]
+        distance = sqrt((current_wp[0]-location[0])**2+(current_wp[1]-location[1])**2)
+        return distance
