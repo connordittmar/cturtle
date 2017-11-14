@@ -5,9 +5,11 @@ from bin import GenericStateController, UDPcomms, SpeedController, WaypointContr
 from bin import VehicleState, Telemetry
 import json
 import requests
+import serial
 
 class ClientHandler(object):
     def __init__(self,url):
+        self.boatcomms = serial.Serial('COM9',115200,timeout=0.5, parity=serial.PARITY_NONE)
         self.url = url
         self.timeout = 10
         self.session = requests.Session()
@@ -69,7 +71,7 @@ class ClientHandler(object):
             return Telemetry()
 
     def post_telemetry(self, telem):
-        self.post('/console/telemetry', data=telem.serialize())
+        self.post('/console/api', data=telem.serialize())
 
     def post_telem_to_server(self,telem):
         return self.executor.submit(self.post_telemetry, telem)
@@ -77,6 +79,10 @@ class ClientHandler(object):
     def send_control_signal(self):
         control_signal = ("$%f,%f" % (self.pwms[0],self.pwms[1]))
         self.communicator.send(control_signal)
+
+    def send_control_signal_serial(self):
+        control_signal = ("$$%6.3f,%6.3f\r\n" % (self.pwms[0],self.pwms[1]))
+        self.boatcomms.write(control_signal)
 
     def set_control_mode(self,mode):
         self.control_mode = mode
@@ -123,5 +129,35 @@ class ClientHandler(object):
             self.telem_count = 0
         else:
             self.telem_count += 1
+        if dt < 0.01:
+            time.sleep(dt)
+
+    def heading_demo(self,heading_desired):
+        start = time.time()
+        self.telemetry = self.get_telemetry()
+        self.vehicle_state.update(self.telemetry,self.telemetry_last)
+        self.desired_state.heading = heading_desired
+    #[self.desired_state.heading,self.desired_state.speed] = [0,1]
+    #err_spd = self.desired_state.speed -self.vehicle_state.speed
+        err_hdg = self.get_err_hdg()
+        f1 = self.hdg_control.control(err_hdg,self.vehicle_state.ang_vel) #forces for heading correction
+    #f2 = self.spd_control.control(err_spd,self.vehicle_state.speed) #forces for speed correction
+        self.pwms = [force2pwm(f1,'left'),force2pwm(-f1,'right')]
+        self.telemetry_last = self.telemetry
+    #if self.wp_last != self.wp_nav.wp_index:
+    #    print "Headed to WP %d" % self.wp_nav.wp_index
+    #    print '\n\n\n\n\n'
+    #self.wp_last = self.wp_nav.wp_index
+        self.send_control_signal()
+        self.send_control_signal_serial()
+        dt = time.time() - start
+    #print  "Current wp:" , self.wp_nav.wp_index , "Position:" , [self.vehicle_state.pos_x,self.vehicle_state.pos_y], "Heading Ordered:" , round(self.desired_state.heading,1)
+        print  "Control Signal:" , self.pwms , "Error:" , err_hdg, "Heading:" , self.vehicle_state.heading
+        #if self.telem_count == 200:
+        #    response = self.post_telem_to_server(self.telemetry)
+        #    print response.result()
+        #    self.telem_count = 0
+        #else:
+        #    self.telem_count += 1
         if dt < 0.01:
             time.sleep(dt)
